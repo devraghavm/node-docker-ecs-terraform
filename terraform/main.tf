@@ -30,14 +30,18 @@ module "archive_vpc" {
   source = "./modules/vpc"
 }
 
+module "archive_alb_sg" {
+  source               = "./modules/sg"
+  aws_sg_name          = var.aws_sg_name
+  aws_sg_description   = var.aws_sg_description
+  aws_sg_ingress_rules = var.archive_sg_ingress_rules
+  aws_sg_egress_rules  = var.archive_sg_egress_rules
+}
+
 module "archive_ec2" {
-  source                               = "./modules/ec2"
+  source                               = "./modules/alb"
   aws_alb_name                         = var.aws_alb_name
-  aws_sg_name                          = var.aws_sg_name
-  aws_sg_description                   = var.aws_sg_description
   aws_default_subnets                  = ["${module.archive_vpc.aws_default_subnet_a_id}", "${module.archive_vpc.aws_default_subnet_b_id}", "${module.archive_vpc.aws_default_subnet_c_id}", "${module.archive_vpc.aws_default_subnet_d_id}"]
-  aws_sg_ingress_rules                 = var.archive_sg_ingress_rules
-  aws_sg_egress_rules                  = var.archive_sg_egress_rules
   aws_alb_tg_name                      = var.archive_alb_tg_name
   aws_alb_tg_port                      = var.archive_alb_tg_port
   aws_alb_tg_protocol                  = var.archive_alb_tg_protocol
@@ -46,7 +50,32 @@ module "archive_ec2" {
   aws_alb_listener_port                = var.archive_alb_listener_port
   aws_alb_listener_protocol            = var.archive_alb_listener_protocol
   aws_alb_listener_default_action_type = var.archive_alb_listener_default_action_type
-  depends_on                           = [module.archive_vpc]
+  aws_alb_sg_id                        = module.archive_alb_sg.aws_sg_id
+  depends_on                           = [module.archive_vpc, module.archive_alb_sg]
+}
+
+module "archive_ecs_sg" {
+  source             = "./modules/sg"
+  aws_sg_name        = var.archive_ecs_sg_name
+  aws_sg_description = var.archive_ecs_sg_description
+  aws_sg_ingress_rules = {
+    "rule1" = {
+      description     = "Allow All Ingress"
+      from_port       = 0
+      to_port         = 0
+      protocol        = "-1"
+      security_groups = ["${module.archive_alb_sg.aws_sg_id}"]
+    }
+  }
+  aws_sg_egress_rules = {
+    "rule1" = {
+      description = "Allow All Egress"
+      from_port   = 0             # Allowing any incoming port
+      to_port     = 0             # Allowing any outgoing port
+      protocol    = "-1"          # Allowing any outgoing protocol 
+      cidr_blocks = ["0.0.0.0/0"] # Allowing traffic out to all IP addresses
+    }
+  }
 }
 
 module "archive_ecs_service" {
@@ -58,27 +87,8 @@ module "archive_ecs_service" {
   aws_ecs_service_lb_task_definition_family     = module.archive_ecs_task_definition.aws_ecs_task_definition_task_family
   aws_ecs_service_lb_task_container_port        = var.aws_ecs_task_container_port
   aws_ecs_service_network_configuration_subnets = ["${module.archive_vpc.aws_default_subnet_a_id}", "${module.archive_vpc.aws_default_subnet_b_id}", "${module.archive_vpc.aws_default_subnet_c_id}", "${module.archive_vpc.aws_default_subnet_d_id}"]
-  aws_ecs_sg_name                               = var.archive_ecs_sg_name
-  aws_ecs_sg_description                        = var.archive_ecs_sg_description
-  aws_ecs_sg_ingress_rules = {
-    "rule1" = {
-      description     = "Allow All Ingress"
-      from_port       = 0
-      to_port         = 0
-      protocol        = "-1"
-      security_groups = ["${module.archive_ec2.aws_lb_sg_id}"]
-    }
-  }
-  aws_ecs_sg_egress_rules = {
-    "rule1" = {
-      description = "Allow All Egress"
-      from_port   = 0             # Allowing any incoming port
-      to_port     = 0             # Allowing any outgoing port
-      protocol    = "-1"          # Allowing any outgoing protocol 
-      cidr_blocks = ["0.0.0.0/0"] # Allowing traffic out to all IP addresses
-    }
-  }
-  depends_on = [module.archive_ecs_task_definition, module.archive_ec2]
+  aws_ecs_service_sg_id                         = module.archive_ecs_sg.aws_sg_id
+  depends_on                                    = [module.archive_ecs_task_definition, module.archive_ec2, module.archive_ecs_sg]
 }
 
 

@@ -178,4 +178,30 @@ variable "archive_ecs_sg_description" {
   default     = "Archive ECS Service SG"
 }
 
+variable "archive_ecs_sg_ingress_rules" {
+  description = "Archive AWS SG Ingress Rules"
+  type = map(object({
+    description     = optional(string)
+    from_port       = number
+    to_port         = number
+    protocol        = string
+    cidr_blocks     = optional(list(string))
+    security_groups = optional(list(string))
+  }))
+  default = {}
+}
+
+variable "archive_ecs_sg_egress_rules" {
+  description = "Archive AWS SG egress Rules"
+  type = map(object({
+    description     = optional(string)
+    from_port       = number
+    to_port         = number
+    protocol        = string
+    cidr_blocks     = optional(list(string))
+    security_groups = optional(list(string))
+  }))
+  default = {}
+}
+
 

@@ -33,37 +33,7 @@ variable "aws_ecs_service_lb_task_container_port" {
   type        = number
 }
 
-variable "aws_ecs_sg_name" {
-  description = "AWS ECS SG Name"
+variable "aws_ecs_service_sg_id" {
+  description = "AWS ECS Service Security Group ID"
   type        = string
-}
-
-variable "aws_ecs_sg_description" {
-  description = "AWS ECS SG Description"
-  type        = string
-}
-
-
-variable "aws_ecs_sg_ingress_rules" {
-  description = "AWS ECS SG Ingress Rules"
-  type = map(object({
-    description     = optional(string)
-    from_port       = number
-    to_port         = number
-    protocol        = string
-    cidr_blocks     = optional(list(string))
-    security_groups = optional(list(string))
-  }))
-}
-
-variable "aws_ecs_sg_egress_rules" {
-  description = "AWS ECS SG egress Rules"
-  type = map(object({
-    description     = string
-    from_port       = number
-    to_port         = number
-    protocol        = string
-    cidr_blocks     = optional(list(string))
-    security_groups = optional(list(string))
-  }))
 }
